@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export type AuthType = "none" | "basic" | "bearer" | "apiKey";
 
@@ -38,7 +39,7 @@ export function AuthEditor({
       if (auth.token) setToken(auth.token);
       if (auth.apiKey) setApiKey(auth.apiKey);
     } catch (e) {
-      // Ignora erro de parse
+      toast.error("Invalid auth data");
     }
   }, [value]);
 
