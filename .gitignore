@@ -33,3 +33,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# api-test
+api-test/node_modules
+api-test/.next
+api-test/build
+api-test/dist
+api-test/coverage
