@@ -1,14 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import { useEffect, useState } from "react";
 
 interface RequestEditorProps {
   value: string;
   onChange: (value: string) => void;
+  placeholder?: string;
 }
 
-export function RequestEditor({ value, onChange }: RequestEditorProps) {
+export function RequestEditor({
+  value,
+  onChange,
+  placeholder,
+}: RequestEditorProps) {
   const [content, setContent] = useState(value);
 
   useEffect(() => {
@@ -24,7 +29,7 @@ export function RequestEditor({ value, onChange }: RequestEditorProps) {
     <Textarea
       value={content}
       onChange={handleChange}
-      placeholder="Enter request body (JSON)"
+      placeholder={placeholder || "Enter request body"}
       className="font-mono h-[200px]"
     />
   );

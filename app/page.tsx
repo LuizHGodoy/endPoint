@@ -1,5 +1,7 @@
 "use client";
 
+import { AuthEditor, type AuthType } from "@/components/auth-editor";
+import { FormDataEditor } from "@/components/form-data-editor";
 import { RequestEditor } from "@/components/request-editor";
 import type { HistoryItem } from "@/components/request-history";
 import { RequestHistory } from "@/components/request-history";
@@ -20,11 +22,20 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH"];
+const BODY_TYPES = ["no body", "json", "form-data"] as const;
+type BodyType = (typeof BODY_TYPES)[number];
 
 interface ResponseData {
   status: number;
   data: Record<string, unknown>;
   time: number;
+}
+
+interface RequestHeaders {
+  "Content-Type"?: string;
+  Authorization?: string;
+  "X-API-Key"?: string;
+  [key: string]: string | undefined;
 }
 
 export default function Home() {
@@ -36,7 +47,10 @@ export default function Home() {
   const [requestBody, setRequestBody] = useState("");
   const [headers, setHeaders] = useState({});
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [bodyType, setBodyType] = useState<BodyType>("json");
   const { theme, setTheme } = useTheme();
+  const [authType, setAuthType] = useState<AuthType>("none");
+  const [auth, setAuth] = useState("{}");
 
   useEffect(() => {
     setMounted(true);
@@ -65,14 +79,67 @@ export default function Home() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
 
-      const options = {
+      const bodyContent = requestBody;
+
+      let finalBody: string | FormData | undefined;
+      let contentType: string | undefined;
+
+      if (method !== "GET" && bodyContent && bodyType !== "no body") {
+        if (bodyType === "json") {
+          finalBody = bodyContent;
+          contentType = "application/json";
+        } else if (bodyType === "form-data") {
+          const formData = new FormData();
+          try {
+            const data = JSON.parse(bodyContent);
+            for (const [key, value] of Object.entries(data)) {
+              formData.append(key, value as string);
+            }
+            finalBody = formData;
+          } catch (e) {
+            toast.error("Invalid form data", {
+              description: "Please enter valid key-value pairs",
+            });
+            return;
+          }
+        }
+      }
+
+      const baseHeaders: RequestHeaders = {
+        ...(contentType && { "Content-Type": contentType }),
+        ...headers,
+      };
+
+      const requestHeaders: RequestHeaders = {
+        ...baseHeaders,
+      };
+
+      if (authType !== "none") {
+        try {
+          const authData = JSON.parse(auth);
+          switch (authType) {
+            case "basic":
+              requestHeaders.Authorization = `Basic ${btoa(
+                `${authData.username}:${authData.password}`
+              )}`;
+              break;
+            case "bearer":
+              requestHeaders.Authorization = `Bearer ${authData.token}`;
+              break;
+            case "apiKey":
+              requestHeaders["X-API-Key"] = authData.apiKey;
+              break;
+          }
+        } catch (e) {
+          // Ignora erro de parse
+        }
+      }
+
+      const options: RequestInit = {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          ...headers,
-        },
+        headers: requestHeaders as HeadersInit,
         signal: controller.signal,
-        ...(method !== "GET" && requestBody && { body: requestBody }),
+        ...(finalBody && { body: finalBody }),
       };
 
       const res = await fetch(url, options);
@@ -100,11 +167,12 @@ export default function Home() {
         });
       }
 
-      const newHistoryItem = {
+      const newHistoryItem: HistoryItem = {
         id: Date.now(),
         url,
         method,
-        body: requestBody,
+        body: bodyContent,
+        bodyType,
         headers,
         response: responseData,
         timestamp: new Date().toISOString(),
@@ -191,10 +259,53 @@ export default function Home() {
             <Tabs defaultValue="body" className="mb-4">
               <TabsList>
                 <TabsTrigger value="body">Body</TabsTrigger>
+                <TabsTrigger value="auth">Authorization</TabsTrigger>
                 <TabsTrigger value="headers">Headers</TabsTrigger>
               </TabsList>
               <TabsContent value="body">
-                <RequestEditor value={requestBody} onChange={setRequestBody} />
+                <div className="space-y-4">
+                  <Select
+                    value={bodyType}
+                    onValueChange={(value: BodyType) => setBodyType(value)}
+                  >
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Body Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BODY_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type.toUpperCase()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {bodyType !== "no body" ? (
+                    bodyType === "json" ? (
+                      <RequestEditor
+                        value={requestBody}
+                        onChange={setRequestBody}
+                        placeholder="Enter JSON body"
+                      />
+                    ) : (
+                      <FormDataEditor
+                        value={requestBody}
+                        onChange={setRequestBody}
+                      />
+                    )
+                  ) : (
+                    <div className="text-sm text-muted-foreground p-4 bg-muted rounded-md">
+                      Esta requisição não requer body
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+              <TabsContent value="auth">
+                <AuthEditor
+                  value={auth}
+                  onChange={setAuth}
+                  authType={authType}
+                  onAuthTypeChange={setAuthType}
+                />
               </TabsContent>
               <TabsContent value="headers">
                 <RequestEditor
@@ -223,6 +334,8 @@ export default function Home() {
                 setMethod(item.method);
                 setRequestBody(item.body);
                 setHeaders(item.headers);
+                setBodyType(item.bodyType);
+                setResponse(item.response);
               }}
             />
           </div>

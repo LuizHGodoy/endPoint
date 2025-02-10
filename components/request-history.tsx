@@ -10,6 +10,7 @@ export interface HistoryItem {
   url: string;
   method: string;
   body: string;
+  bodyType: "no body" | "json" | "form-data";
   headers: Record<string, string>;
   response: {
     status: number;
