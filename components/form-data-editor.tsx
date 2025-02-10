@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface FormDataItem {
+  id: string;
   key: string;
   value: string;
 }
@@ -16,12 +18,15 @@ interface FormDataEditorProps {
 }
 
 export function FormDataEditor({ value, onChange }: FormDataEditorProps) {
-  const [items, setItems] = useState<FormDataItem[]>([{ key: "", value: "" }]);
+  const [items, setItems] = useState<FormDataItem[]>([
+    { id: Date.now().toString(), key: "", value: "" },
+  ]);
 
   useEffect(() => {
     try {
       const parsedValue = JSON.parse(value);
       const newItems = Object.entries(parsedValue).map(([key, value]) => ({
+        id: Date.now().toString() + Math.random(),
         key,
         value: String(value),
       }));
@@ -29,7 +34,7 @@ export function FormDataEditor({ value, onChange }: FormDataEditorProps) {
         setItems(newItems);
       }
     } catch (e) {
-      // Ignora erro de parse
+      toast.error("Invalid form data");
     }
   }, [value]);
 
@@ -45,7 +50,7 @@ export function FormDataEditor({ value, onChange }: FormDataEditorProps) {
   };
 
   const addItem = () => {
-    updateItems([...items, { key: "", value: "" }]);
+    updateItems([...items, { id: Date.now().toString(), key: "", value: "" }]);
   };
 
   const removeItem = (index: number) => {
@@ -65,22 +70,26 @@ export function FormDataEditor({ value, onChange }: FormDataEditorProps) {
 
   return (
     <div className="space-y-2">
-      {items.map((item, index) => (
-        <div key={index} className="flex gap-2">
+      {items.map((item) => (
+        <div key={item.id} className="flex gap-2">
           <Input
             placeholder="Key"
             value={item.key}
-            onChange={(e) => updateItem(index, "key", e.target.value)}
+            onChange={(e) =>
+              updateItem(items.indexOf(item), "key", e.target.value)
+            }
           />
           <Input
             placeholder="Value"
             value={item.value}
-            onChange={(e) => updateItem(index, "value", e.target.value)}
+            onChange={(e) =>
+              updateItem(items.indexOf(item), "value", e.target.value)
+            }
           />
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => removeItem(index)}
+            onClick={() => removeItem(items.indexOf(item))}
             disabled={items.length === 1}
           >
             <Trash2 className="h-4 w-4" />

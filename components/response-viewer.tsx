@@ -31,7 +31,9 @@ export function ResponseViewer({ response }: ResponseViewerProps) {
           </Badge>
           <div className="flex items-center text-sm text-muted-foreground">
             <Clock className="mr-1 h-4 w-4" />
-            {response.time}ms
+            {response.time < 1000
+              ? `${Math.round(response.time)}ms`
+              : `${(response.time / 1000).toFixed(2)}s`}
           </div>
         </div>
       </CardHeader>
