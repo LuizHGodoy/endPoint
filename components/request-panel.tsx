@@ -1,10 +1,10 @@
 import { AuthEditor } from "@/components/auth-editor";
+import { EnvironmentEditor } from "@/components/environment-editor";
 import { FormDataEditor } from "@/components/form-data-editor";
 import { RequestEditor } from "@/components/request-editor";
 import { RequestHistory } from "@/components/request-history";
 import { ResponseViewer } from "@/components/response-viewer";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VariableInput } from "@/components/variable-input";
 import {
   type AuthType,
   type BodyType,
@@ -25,6 +26,7 @@ import {
   currentCollectionIdAtom,
   currentEndpointAtom,
   currentEndpointIdAtom,
+  globalEnvironmentAtom,
   tempRequestAtom,
   updateEndpointHistoryAtom,
 } from "@/lib/atoms";
@@ -35,12 +37,12 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export function RequestPanel() {
-  const [currentEndpoint] = useAtom(currentEndpointAtom);
-  const [currentCollectionId] = useAtom(currentCollectionIdAtom);
-  const [currentEndpointId] = useAtom(currentEndpointIdAtom);
   const [collections, setCollections] = useAtom(collectionsAtom);
+  const [currentCollectionId] = useAtom(currentCollectionIdAtom);
+  const [currentEndpoint] = useAtom(currentEndpointAtom);
+  const [currentEndpointId] = useAtom(currentEndpointIdAtom);
   const [tempRequest, setTempRequest] = useAtom(tempRequestAtom);
-  const [, updateEndpointHistory] = useAtom(updateEndpointHistoryAtom);
+  const [globalEnv] = useAtom(globalEnvironmentAtom);
   const [mounted, setMounted] = useState(false);
   const [url, setUrl] = useState("");
   const [method, setMethod] = useState<HttpMethod>("GET");
@@ -52,6 +54,10 @@ export function RequestPanel() {
   const [authType, setAuthType] = useState<AuthType>("none");
   const [auth, setAuth] = useState("{}");
   const [response, setResponse] = useState<ResponseData | null>(null);
+
+  const currentCollection = collections.find(
+    (c) => c.id === currentCollectionId
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -78,6 +84,34 @@ export function RequestPanel() {
       setResponse(tempRequest.response || null);
     }
   }, [currentEndpoint, tempRequest]);
+
+  const replaceVariables = (text: string) => {
+    let result = text;
+
+    // Primeiro substitui as variáveis globais
+    for (const variable of globalEnv.variables || []) {
+      const pattern = new RegExp(`{{${variable.name}}}`, "g");
+      result = result.replace(pattern, variable.value);
+    }
+
+    // Depois substitui as variáveis da coleção (que têm precedência sobre as globais)
+    if (currentCollection) {
+      for (const variable of currentCollection.variables || []) {
+        const pattern = new RegExp(`{{${variable.name}}}`, "g");
+        result = result.replace(pattern, variable.value);
+      }
+    }
+
+    return result;
+  };
+
+  const processHeaders = (headers: Record<string, string>) => {
+    const result: Record<string, string> = {};
+    for (const [key, value] of Object.entries(headers)) {
+      result[key] = replaceVariables(value);
+    }
+    return result;
+  };
 
   const handleSend = async () => {
     if (!currentCollectionId || !currentEndpointId) {
@@ -121,83 +155,63 @@ export function RequestPanel() {
     try {
       const startTime = performance.now();
 
-      const finalHeaders: Record<string, string> = { ...headers };
+      const processedPath = replaceVariables(url);
+      const processedHeaders = processHeaders(headers);
+      let processedBody: string | FormData | undefined = undefined;
+      const processedAuth = replaceVariables(auth);
 
-      if (authType === "bearer") {
-        try {
-          const authData = JSON.parse(auth);
-          if (authData.token) {
-            finalHeaders.Authorization = `Bearer ${authData.token}`;
-          }
-        } catch (e) {
-          toast.error("Token de autenticação inválido");
-          return;
-        }
-      } else if (authType === "basic") {
-        try {
-          const authData = JSON.parse(auth);
-          if (authData.username && authData.password) {
-            const basicAuth = btoa(`${authData.username}:${authData.password}`);
-            finalHeaders.Authorization = `Basic ${basicAuth}`;
-          }
-        } catch (e) {
-          toast.error("Credenciais de autenticação inválidas");
-          return;
-        }
-      } else if (authType === "apiKey") {
-        try {
-          const authData = JSON.parse(auth);
-          if (authData.key) {
-            finalHeaders["X-API-Key"] = authData.key;
-          }
-        } catch (e) {
-          toast.error("API Key inválida");
-          return;
-        }
-      }
-
-      if (method !== "GET" && bodyType !== "no body") {
-        if (bodyType === "json") {
-          finalHeaders["Content-Type"] = "application/json";
-        }
-      }
-
-      let finalBody: string | FormData | undefined;
       if (method !== "GET" && bodyType !== "no body" && requestBody) {
         if (bodyType === "json") {
           try {
-            JSON.parse(requestBody);
-            finalBody = requestBody;
+            const jsonData = JSON.parse(requestBody);
+            const processJsonObject = (obj: unknown): unknown => {
+              if (typeof obj === "string") {
+                return replaceVariables(obj);
+              }
+              if (Array.isArray(obj)) {
+                return obj.map((item) => processJsonObject(item));
+              }
+              if (typeof obj === "object" && obj !== null) {
+                const result: Record<string, unknown> = {};
+                for (const [key, value] of Object.entries(obj)) {
+                  result[key] = processJsonObject(value);
+                }
+                return result;
+              }
+              return obj;
+            };
+
+            const processedJsonData = processJsonObject(jsonData);
+            processedBody = JSON.stringify(processedJsonData);
           } catch (e) {
-            toast.error("Body JSON inválido", {
-              description: "Por favor, insira um JSON válido",
+            toast.error("JSON inválido", {
+              description: "Por favor, verifique o formato do JSON",
             });
             setLoading(false);
             return;
           }
         } else if (bodyType === "form-data") {
-          try {
-            const formData = new FormData();
-            const data = JSON.parse(requestBody);
-            for (const [key, value] of Object.entries(data)) {
-              formData.append(key, value as string);
-            }
-            finalBody = formData;
-          } catch (e) {
-            toast.error("Form data inválido", {
-              description:
-                "Por favor, insira um objeto JSON válido para o form-data",
-            });
-            setLoading(false);
-            return;
+          const formData = new FormData();
+          const data = JSON.parse(requestBody);
+          for (const [key, value] of Object.entries(data)) {
+            formData.append(key, replaceVariables(value as string));
           }
+          processedBody = formData;
         }
       }
 
-      const res = await fetch(url, {
+      const res = await fetch(processedPath, {
         method,
-        headers: finalHeaders,
-        body: finalBody,
+        headers: {
+          ...processedHeaders,
+          ...(authType === "bearer"
+            ? { Authorization: `Bearer ${replaceVariables(processedAuth)}` }
+            : {}),
+          ...(method !== "GET" && bodyType !== "no body" && bodyType === "json"
+            ? { "Content-Type": "application/json" }
+            : {}),
+        },
+        body: processedBody,
       });
 
       const endTime = performance.now();
@@ -216,7 +230,7 @@ export function RequestPanel() {
         method,
         body: requestBody || "",
         bodyType,
-        headers: finalHeaders,
+        headers: processedHeaders,
         response: responseData,
         timestamp: new Date().toISOString(),
       };
@@ -289,7 +303,7 @@ export function RequestPanel() {
               value={method}
               onValueChange={(value: HttpMethod) => setMethod(value)}
             >
-              <SelectTrigger className="w-[100px]">
+              <SelectTrigger className="w-24">
                 <SelectValue placeholder="Method" />
               </SelectTrigger>
               <SelectContent>
@@ -299,13 +313,15 @@ export function RequestPanel() {
                 <SelectItem value="DELETE">DELETE</SelectItem>
               </SelectContent>
             </Select>
-            <Input
-              placeholder="Enter URL"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              className="flex-1"
-            />
-            <Button onClick={handleSend} disabled={loading}>
+            <div className="flex-1">
+              <VariableInput
+                placeholder="Enter URL"
+                value={url}
+                onValueChange={setUrl}
+                className="w-full"
+              />
+            </div>
+            <Button onClick={handleSend} disabled={loading} className="w-28">
               <Send className="h-4 w-4 mr-2" />
               {loading ? "Enviando..." : "Enviar"}
             </Button>
@@ -333,6 +349,7 @@ export function RequestPanel() {
                 <TabsTrigger value="body">Body</TabsTrigger>
                 <TabsTrigger value="auth">Auth</TabsTrigger>
                 <TabsTrigger value="headers">Headers</TabsTrigger>
+                <TabsTrigger value="variables">Variáveis</TabsTrigger>
               </TabsList>
               <TabsContent value="body" className="flex-1 overflow-auto">
                 {method !== "GET" && (
@@ -391,6 +408,10 @@ export function RequestPanel() {
                     }
                   }}
                 />
+              </TabsContent>
+
+              <TabsContent value="variables" className="flex-1 overflow-auto">
+                <EnvironmentEditor />
               </TabsContent>
             </Tabs>
 

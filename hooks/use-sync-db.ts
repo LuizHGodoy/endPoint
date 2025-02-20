@@ -1,94 +1,99 @@
 import {
-	collectionsAtom,
-	currentCollectionIdAtom,
-	currentEndpointIdAtom,
-	tempRequestAtom,
+  collectionsAtom,
+  currentCollectionIdAtom,
+  currentEndpointIdAtom,
+  globalEnvironmentAtom,
+  tempRequestAtom,
 } from "@/lib/atoms";
-import { dbService } from "@/lib/db";
+import {
+  getCollections,
+  getCurrentCollectionId,
+  getCurrentEndpointId,
+  getGlobalEnvironment,
+  getTempRequest,
+  setCollections,
+  setCurrentCollectionId,
+  setCurrentEndpointId,
+  setGlobalEnvironment,
+  setTempRequest,
+} from "@/lib/db";
 import { useAtom } from "jotai";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 export function useSyncDB() {
-	const [collections, setCollections] = useAtom(collectionsAtom);
-	const [currentCollectionId, setCurrentCollectionId] = useAtom(
-		currentCollectionIdAtom,
-	);
-	const [currentEndpointId, setCurrentEndpointId] = useAtom(
-		currentEndpointIdAtom,
-	);
-	const [tempRequest, setTempRequest] = useAtom(tempRequestAtom);
-	const isInitializedRef = useRef(false);
+  const [collections, setCollectionsAtom] = useAtom(collectionsAtom);
+  const [currentCollectionId, setCurrentCollectionIdAtom] = useAtom(
+    currentCollectionIdAtom
+  );
+  const [currentEndpointId, setCurrentEndpointIdAtom] = useAtom(
+    currentEndpointIdAtom
+  );
+  const [tempRequest, setTempRequestAtom] = useAtom(tempRequestAtom);
+  const [globalEnv, setGlobalEnvAtom] = useAtom(globalEnvironmentAtom);
 
-	useEffect(() => {
-		const loadInitialData = async () => {
-			try {
-				const savedCollections = await dbService.getAllCollections();
-				if (savedCollections.length > 0) {
-					setCollections(savedCollections);
-				}
+  useEffect(() => {
+    let mounted = true;
 
-				const { collectionId, endpointId } = await dbService.getCurrentIds();
-				setCurrentCollectionId(collectionId);
-				setCurrentEndpointId(endpointId);
+    const initializeFromDB = async () => {
+      try {
+        const [
+          dbCollections,
+          dbCurrentCollectionId,
+          dbCurrentEndpointId,
+          dbTempRequest,
+          dbGlobalEnv,
+        ] = await Promise.all([
+          getCollections(),
+          getCurrentCollectionId(),
+          getCurrentEndpointId(),
+          getTempRequest(),
+          getGlobalEnvironment(),
+        ]);
 
-				const savedTempRequest = await dbService.getTempRequest();
-				if (savedTempRequest) {
-					setTempRequest(savedTempRequest);
-				}
+        if (!mounted) return;
 
-				isInitializedRef.current = true;
-			} catch (error) {
-				console.error("Erro ao carregar dados iniciais:", error);
-			}
-		};
+        setCollectionsAtom(dbCollections);
+        setCurrentCollectionIdAtom(dbCurrentCollectionId);
+        setCurrentEndpointIdAtom(dbCurrentEndpointId);
+        if (dbTempRequest) {
+          setTempRequestAtom(dbTempRequest);
+        }
+        setGlobalEnvAtom(dbGlobalEnv);
+      } catch (error) {
+        console.error("Erro ao inicializar do banco:", error);
+      }
+    };
 
-		loadInitialData();
-	}, [
-		setCollections,
-		setCurrentCollectionId,
-		setCurrentEndpointId,
-		setTempRequest,
-	]);
+    initializeFromDB();
 
-	useEffect(() => {
-		if (!isInitializedRef.current) return;
+    return () => {
+      mounted = false;
+    };
+  }, [
+    setCollectionsAtom,
+    setCurrentCollectionIdAtom,
+    setCurrentEndpointIdAtom,
+    setTempRequestAtom,
+    setGlobalEnvAtom
+  ]);
 
-		const saveData = async () => {
-			try {
-				await dbService.saveCollections(collections);
-			} catch (error) {
-				console.error("Erro ao salvar coleções:", error);
-			}
-		};
+  useEffect(() => {
+    const saveToDB = async () => {
+      await Promise.all([
+        setCollections(collections),
+        setCurrentCollectionId(currentCollectionId),
+        setCurrentEndpointId(currentEndpointId),
+        setTempRequest(tempRequest),
+        setGlobalEnvironment(globalEnv),
+      ]);
+    };
 
-		saveData();
-	}, [collections]);
-
-	useEffect(() => {
-		if (!isInitializedRef.current) return;
-
-		const saveData = async () => {
-			try {
-				await dbService.saveTempRequest(tempRequest);
-			} catch (error) {
-				console.error("Erro ao salvar request temporária:", error);
-			}
-		};
-
-		saveData();
-	}, [tempRequest]);
-
-	useEffect(() => {
-		if (!isInitializedRef.current) return;
-
-		const saveData = async () => {
-			try {
-				await dbService.saveCurrentIds(currentCollectionId, currentEndpointId);
-			} catch (error) {
-				console.error("Erro ao salvar IDs atuais:", error);
-			}
-		};
-
-		saveData();
-	}, [currentCollectionId, currentEndpointId]);
+    saveToDB();
+  }, [
+    collections,
+    currentCollectionId,
+    currentEndpointId,
+    tempRequest,
+    globalEnv,
+  ]);
 }
