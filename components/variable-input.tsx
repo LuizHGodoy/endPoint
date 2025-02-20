@@ -41,7 +41,6 @@ export function VariableInput({ onValueChange, ...props }: VariableInputProps) {
 
     setCursorPosition(position);
 
-    // Verifica se acabamos de digitar '{{'
     if (value.slice(position - 2, position) === "{{") {
       setOpen(true);
     }
@@ -79,7 +78,6 @@ export function VariableInput({ onValueChange, ...props }: VariableInputProps) {
       <Popover
         open={open}
         onOpenChange={(isOpen) => {
-          // Só permite fechar o popover, não abrir
           if (!isOpen) setOpen(false);
         }}
       >

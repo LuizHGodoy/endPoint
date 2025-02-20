@@ -39,7 +39,6 @@ export function VariableEditor({
       editorRef.current?.querySelector("textarea")?.selectionStart || 0;
     setCursorPosition(position);
 
-    // Verifica se acabamos de digitar '{{'
     if (newValue.slice(position - 2, position) === "{{") {
       setOpen(true);
     }
@@ -64,7 +63,6 @@ export function VariableEditor({
       <Popover
         open={open}
         onOpenChange={(isOpen) => {
-          // Só permite fechar o popover, não abrir
           if (!isOpen) setOpen(false);
         }}
       >

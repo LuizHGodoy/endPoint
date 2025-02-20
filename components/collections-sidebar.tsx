@@ -81,6 +81,7 @@ export default function CollectionsSidebar({
         name: newCollectionName.trim(),
         endpoints: [],
         isOpen: true,
+        variables: [],
       };
       setCollections([...collections, newCollection]);
       setNewCollectionName("");
@@ -126,19 +127,6 @@ export default function CollectionsSidebar({
       authType: "none",
     });
     setSelectedCollectionId(null);
-  };
-
-  const deleteEndpoint = (collectionId: string, endpointId: string) => {
-    setCollections(
-      collections.map((col) =>
-        col.id === collectionId
-          ? {
-              ...col,
-              endpoints: col.endpoints.filter((ep) => ep.id !== endpointId),
-            }
-          : col
-      )
-    );
   };
 
   const handleEndpointClick = (
@@ -399,6 +387,7 @@ export default function CollectionsSidebar({
                 <div className="ml-6 space-y-1">
                   {collection.endpoints.map((endpoint) => (
                     <button
+                      type="button"
                       key={endpoint.id}
                       onClick={() => {
                         setCurrentEndpointId(endpoint.id);
@@ -445,7 +434,9 @@ export default function CollectionsSidebar({
                               ${endpoint.method === "GET" && "text-green-500"}
                               ${endpoint.method === "POST" && "text-yellow-500"}
                               ${endpoint.method === "PUT" && "text-blue-500"}
-                              ${endpoint.method === "DELETE" && "text-red-500"}
+                              ${
+                                endpoint.method === "DELETE" && "text-red-500"
+                              }
                             `}
                           >
                             {endpoint.method}

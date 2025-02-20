@@ -32,30 +32,50 @@ export function useSyncDB() {
   const [globalEnv, setGlobalEnvAtom] = useAtom(globalEnvironmentAtom);
 
   useEffect(() => {
-    const loadFromDB = async () => {
-      const [
-        dbCollections,
-        dbCurrentCollectionId,
-        dbCurrentEndpointId,
-        dbTempRequest,
-        dbGlobalEnv,
-      ] = await Promise.all([
-        getCollections(),
-        getCurrentCollectionId(),
-        getCurrentEndpointId(),
-        getTempRequest(),
-        getGlobalEnvironment(),
-      ]);
+    let mounted = true;
 
-      setCollectionsAtom(dbCollections);
-      setCurrentCollectionIdAtom(dbCurrentCollectionId);
-      setCurrentEndpointIdAtom(dbCurrentEndpointId);
-      setTempRequestAtom(dbTempRequest);
-      setGlobalEnvAtom(dbGlobalEnv);
+    const initializeFromDB = async () => {
+      try {
+        const [
+          dbCollections,
+          dbCurrentCollectionId,
+          dbCurrentEndpointId,
+          dbTempRequest,
+          dbGlobalEnv,
+        ] = await Promise.all([
+          getCollections(),
+          getCurrentCollectionId(),
+          getCurrentEndpointId(),
+          getTempRequest(),
+          getGlobalEnvironment(),
+        ]);
+
+        if (!mounted) return;
+
+        setCollectionsAtom(dbCollections);
+        setCurrentCollectionIdAtom(dbCurrentCollectionId);
+        setCurrentEndpointIdAtom(dbCurrentEndpointId);
+        if (dbTempRequest) {
+          setTempRequestAtom(dbTempRequest);
+        }
+        setGlobalEnvAtom(dbGlobalEnv);
+      } catch (error) {
+        console.error("Erro ao inicializar do banco:", error);
+      }
     };
 
-    loadFromDB();
-  }, []);
+    initializeFromDB();
+
+    return () => {
+      mounted = false;
+    };
+  }, [
+    setCollectionsAtom,
+    setCurrentCollectionIdAtom,
+    setCurrentEndpointIdAtom,
+    setTempRequestAtom,
+    setGlobalEnvAtom
+  ]);
 
   useEffect(() => {
     const saveToDB = async () => {

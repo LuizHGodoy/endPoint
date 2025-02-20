@@ -26,8 +26,6 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
             <h2 className="text-lg font-medium">Variáveis Globais ({globalEnv.variables.length})</h2>
             <GlobalEnvironmentEditor />
           </section>
-
-          {/* Adicione mais seções de configurações aqui */}
         </div>
       </div>
     </div>

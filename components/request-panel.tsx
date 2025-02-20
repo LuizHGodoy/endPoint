@@ -42,7 +42,6 @@ export function RequestPanel() {
   const [currentEndpoint] = useAtom(currentEndpointAtom);
   const [currentEndpointId] = useAtom(currentEndpointIdAtom);
   const [tempRequest, setTempRequest] = useAtom(tempRequestAtom);
-  const [, updateEndpointHistory] = useAtom(updateEndpointHistoryAtom);
   const [globalEnv] = useAtom(globalEnvironmentAtom);
   const [mounted, setMounted] = useState(false);
   const [url, setUrl] = useState("");
@@ -164,9 +163,7 @@ export function RequestPanel() {
       if (method !== "GET" && bodyType !== "no body" && requestBody) {
         if (bodyType === "json") {
           try {
-            // Primeiro faz o parse do JSON
             const jsonData = JSON.parse(requestBody);
-            // Depois substitui as variáveis em todas as strings do objeto
             const processJsonObject = (obj: unknown): unknown => {
               if (typeof obj === "string") {
                 return replaceVariables(obj);
