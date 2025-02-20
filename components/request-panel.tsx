@@ -28,7 +28,6 @@ import {
   currentEndpointIdAtom,
   globalEnvironmentAtom,
   tempRequestAtom,
-  updateEndpointHistoryAtom,
 } from "@/lib/atoms";
 import { useAtom } from "jotai";
 import { Moon, Send, Sun } from "lucide-react";
@@ -88,13 +87,11 @@ export function RequestPanel() {
   const replaceVariables = (text: string) => {
     let result = text;
 
-    // Primeiro substitui as variáveis globais
     for (const variable of globalEnv.variables || []) {
       const pattern = new RegExp(`{{${variable.name}}}`, "g");
       result = result.replace(pattern, variable.value);
     }
 
-    // Depois substitui as variáveis da coleção (que têm precedência sobre as globais)
     if (currentCollection) {
       for (const variable of currentCollection.variables || []) {
         const pattern = new RegExp(`{{${variable.name}}}`, "g");

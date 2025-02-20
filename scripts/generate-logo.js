@@ -2,12 +2,11 @@ const sharp = require("sharp");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const size = 512; // Tamanho base da imagem
-const padding = 64; // Espaço ao redor do texto
-const backgroundColor = { r: 0, g: 0, b: 0, alpha: 1 }; // Preto
-const textColor = { r: 255, g: 255, b: 255, alpha: 1 }; // Branco
+const size = 512;
+const padding = 64;
+const backgroundColor = { r: 0, g: 0, b: 0, alpha: 1 };
+const textColor = { r: 255, g: 255, b: 255, alpha: 1 };
 
-// Criar um SVG com o texto estilizado
 const svg = `
 <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
   <circle 
@@ -56,17 +55,14 @@ const svg = `
   </g>
 </svg>`;
 
-// Caminho para salvar a logo
 const outputPath = path.join(__dirname, "..", "public", "logo.png");
 
-// Gerar a imagem PNG
 sharp(Buffer.from(svg))
   .resize(size, size)
   .png()
   .toFile(outputPath)
   .then(() => {
     console.log("Logo gerada com sucesso!");
-    // Executar o script de geração de ícones
     require("./generate-icons.js");
   })
   .catch((err) => {

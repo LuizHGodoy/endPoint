@@ -42,7 +42,6 @@ async function generateIcons() {
   }
 
   try {
-    // Gerar todos os ícones PNG
     for (const icon of ICONS) {
       await sharp(LOGO_PATH)
         .resize(icon.size, icon.size, {
@@ -55,14 +54,12 @@ async function generateIcons() {
       console.log(`Generated ${icon.name}`);
     }
 
-    // Copiar favicon-32x32.png como favicon.ico
     fs.copyFileSync(
       path.join(PUBLIC_DIR, "favicon-32x32.png"),
       path.join(PUBLIC_DIR, "favicon.ico")
     );
     console.log("Generated favicon.ico");
 
-    // Gerar manifest.json
     fs.writeFileSync(
       path.join(PUBLIC_DIR, "site.webmanifest"),
       JSON.stringify(MANIFEST, null, 2)
