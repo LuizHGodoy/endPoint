@@ -1,7 +1,8 @@
 "use client";
 
-import CollectionsSidebar from "@/components/collections-sidebar";
 import { RequestPanel } from "@/components/request-panel";
+import { SettingsScreen } from "@/components/settings-screen";
+import { SidebarNavigation } from "@/components/sidebar-navigation";
 import { useSyncDB } from "@/hooks/use-sync-db";
 import { Provider } from "jotai";
 import { ChevronRight } from "lucide-react";
@@ -25,6 +26,7 @@ function AppContent({
   setIsCollapsed: (value: boolean) => void;
 }) {
   useSyncDB();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -36,7 +38,11 @@ function AppContent({
         `}
       >
         <div className="h-full">
-          <CollectionsSidebar isCollapsed={isCollapsed} />
+          <SidebarNavigation 
+            isCollapsed={isCollapsed}
+            onOpenSettings={() => setIsSettingsOpen(true)} 
+            onItemClick={() => setIsSettingsOpen(false)}
+          />
         </div>
 
         <button
@@ -52,8 +58,14 @@ function AppContent({
         </button>
       </aside>
 
-      <main className="flex-1 overflow-hidden pl-8">
-        <RequestPanel />
+      <main className="flex-1 overflow-hidden">
+        {isSettingsOpen ? (
+          <SettingsScreen onClose={() => setIsSettingsOpen(false)} />
+        ) : (
+          <div className="pl-8">
+            <RequestPanel />
+          </div>
+        )}
       </main>
     </div>
   );

@@ -33,10 +33,12 @@ import {
 
 interface CollectionsSidebarProps {
   isCollapsed: boolean;
+  onItemClick?: () => void;
 }
 
 export default function CollectionsSidebar({
   isCollapsed,
+  onItemClick,
 }: CollectionsSidebarProps) {
   const [collections, setCollections] = useAtom(collectionsAtom);
   const [currentCollectionId, setCurrentCollectionId] = useAtom(
@@ -145,6 +147,7 @@ export default function CollectionsSidebar({
   ) => {
     setCurrentCollectionId(collectionId);
     setCurrentEndpointId(endpoint.id);
+    onItemClick?.();
   };
 
   const handleRename = (
@@ -395,16 +398,18 @@ export default function CollectionsSidebar({
               {collection.isOpen && (
                 <div className="ml-6 space-y-1">
                   {collection.endpoints.map((endpoint) => (
-                    <div
+                    <button
                       key={endpoint.id}
-                      className="flex items-center justify-between p-2 hover:bg-gray-800 rounded group cursor-pointer"
-                      onClick={() =>
-                        handleEndpointClick(collection.id, endpoint)
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter")
-                          handleEndpointClick(collection.id, endpoint);
+                      onClick={() => {
+                        setCurrentEndpointId(endpoint.id);
+                        setCurrentCollectionId(collection.id);
+                        onItemClick?.();
                       }}
+                      className={`w-full text-left px-2 py-1 rounded hover:bg-gray-800 ${
+                        currentEndpointId === endpoint.id
+                          ? "bg-gray-800"
+                          : ""
+                      }`}
                     >
                       {editingName?.id === endpoint.id ? (
                         <div className="flex items-center flex-1 gap-2">
@@ -448,45 +453,7 @@ export default function CollectionsSidebar({
                           {endpoint.name}
                         </div>
                       )}
-                      <div className="opacity-0 group-hover:opacity-100 flex items-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                            >
-                              <MoreVertical className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRename(
-                                  endpoint.id,
-                                  "endpoint",
-                                  endpoint.name
-                                );
-                              }}
-                            >
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Renomear
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteEndpoint(collection.id, endpoint.id);
-                              }}
-                              className="text-red-500"
-                            >
-                              <Trash className="h-4 w-4 mr-2" />
-                              Deletar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
