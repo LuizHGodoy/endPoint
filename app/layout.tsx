@@ -49,8 +49,8 @@ export default function RootLayout({
         >
           {children}
           <Toaster position="top-right" richColors />
-          <Analytics/>
         </ThemeProvider>
+        <Analytics mode="auto" debug={process.env.NODE_ENV === "development"} />
       </body>
     </html>
   );
