@@ -44,6 +44,7 @@
     "@types/node": "20.6.2",
     "@types/react": "18.2.22",
     "@types/react-dom": "18.2.7",
+    "@vercel/analytics": "^1.5.0",
     "autoprefixer": "10.4.15",
     "better-sqlite3": "^11.8.1",
     "class-variance-authority": "^0.7.0",
@@ -66,14 +67,14 @@
     "react-hook-form": "^7.53.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.12.7",
+    "sharp": "^0.33.2",
     "sonner": "^1.5.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss": "3.3.3",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "5.2.2",
     "vaul": "^0.9.9",
-    "zod": "^3.23.8",
-    "sharp": "^0.33.2"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "sharp": "^0.33.5"
